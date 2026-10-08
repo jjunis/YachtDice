@@ -9,6 +9,7 @@ public class ScoreBoard : MonoBehaviour
     [SerializeField] private Transform rowParent;   // VerticalLayoutGroup이 붙은 패널
     [SerializeField] private Button rowPrefab;      // Button (TMP) 프리팹
     [SerializeField] private TMP_Text totalText;    // 총점 표시
+    [SerializeField] private string boardTitle = "플레이어";
 
     [Header("Bonus")]
     [SerializeField] private int bonusThreshold = 63; // 상단(1~6) 합계 기준
@@ -78,6 +79,35 @@ public class ScoreBoard : MonoBehaviour
         RefreshAll();
     }
 
+    // AI가 사용하는 점수 확정 (클릭 없이 코드로 직접 선택). 획득한 점수를 반환
+    public int Commit(Category category, int[] dice)
+    {
+        int index = (int)category;
+
+        if (used[index]) return 0;
+
+        int score = YachtScorer.Calculate(dice, category);
+
+        scores[index] = score;
+        used[index] = true;
+
+        currentDice = null;
+        canSelect = false;
+
+        RefreshAll();
+        UpdateTotal();
+
+        OnCategoryChosen?.Invoke(category, score);
+
+        return score;
+    }
+
+    // 이미 사용한 족보 목록 (복사본)
+    public bool[] GetUsedFlags()
+    {
+        return (bool[])used.Clone();
+    }
+
     public bool IsFull()
     {
         for (int i = 0; i < categoryCount; i++)
@@ -116,23 +146,12 @@ public class ScoreBoard : MonoBehaviour
     // 내부
     // ==========================================
 
+    // 플레이어가 버튼을 클릭했을 때
     private void Select(int index)
     {
         if (!canSelect || currentDice == null || used[index]) return;
 
-        Category category = (Category)index;
-        int score = YachtScorer.Calculate(currentDice, category);
-
-        scores[index] = score;
-        used[index] = true;
-
-        currentDice = null;
-        canSelect = false;
-
-        RefreshAll();
-        UpdateTotal();
-
-        OnCategoryChosen?.Invoke(category, score);
+        Commit((Category)index, currentDice);
     }
 
     private void RefreshAll()
@@ -180,6 +199,7 @@ public class ScoreBoard : MonoBehaviour
         if (totalText == null) return;
 
         totalText.text =
+            $"[{boardTitle}]\n" +
             $"상단 합계 {GetUpperSum()} / {bonusThreshold}  (보너스 {GetBonus()})\n" +
             $"총점 {GetTotal()}";
     }
