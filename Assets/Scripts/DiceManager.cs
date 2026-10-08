@@ -24,7 +24,7 @@ public class DiceManager : MonoBehaviour
     [Header("UI Layout (오른쪽 위)")]
     [SerializeField] private Vector2 infoMargin = new Vector2(30f, 30f);
     [SerializeField] private Vector2 infoSize = new Vector2(500f, 200f);
-    [SerializeField] private float infoFontSize = 28f;
+    [SerializeField] private float infoFontSize = 40f;
 
     [Header("Effect (선택)")]
     //[SerializeField] private SlamEffect slamEffect;  // 없으면 연출 없이 바로 굴림
@@ -397,6 +397,5 @@ public class DiceManager : MonoBehaviour
         rt.sizeDelta = infoSize;
 
         infoText.alignment = TextAlignmentOptions.TopRight;
-        infoText.fontSize = infoFontSize;
     }
 }

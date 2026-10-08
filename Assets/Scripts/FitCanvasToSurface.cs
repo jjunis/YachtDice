@@ -1,30 +1,33 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// World Space Canvas¸¦ Plane Ç¥¸é À§¿¡ ´¯Çô¼­, Plane Å©±â¿¡ ¸Â°Ô ÀÚµ¿À¸·Î ¹èÄ¡
+// World Space Canvasë¥¼ Plane í‘œë©´ ìœ„ì— ëˆ•í˜€ì„œ, Plane í¬ê¸°ì— ë§ê²Œ ìë™ìœ¼ë¡œ ë°°ì¹˜
 [RequireComponent(typeof(Canvas))]
 public class FitCanvasToSurface : MonoBehaviour
 {
     [Header("Target")]
-    [SerializeField] private Renderer surface;           // PlaneÀÇ Mesh Renderer
+    [SerializeField] private Renderer surface;           // Planeì˜ Mesh Renderer
 
     [Header("Fit")]
-    [SerializeField] private float heightOffset = 0.02f; // Ç¥¸é¿¡¼­ ¶ç¿ì´Â ³ôÀÌ (°ãÃÄ¼­ ±ôºıÀÌ¸é ¿Ã¸®±â)
+    [SerializeField] private float heightOffset = 0.02f; // í‘œë©´ì—ì„œ ë„ìš°ëŠ” ë†’ì´ (ê²¹ì³ì„œ ê¹œë¹¡ì´ë©´ ì˜¬ë¦¬ê¸°)
     [Range(0.5f, 1f)]
-    [SerializeField] private float fill = 0.92f;         // PlaneÀ» ¾ó¸¶³ª Ã¤¿ïÁö (1 = °¡µæ)
-    [SerializeField] private bool rotate180 = false;     // ±ÛÀÚ°¡ °Å²Ù·Î º¸ÀÌ¸é Ã¼Å©
+    [SerializeField] private float fill = 1f;            // Planeì„ ì–¼ë§ˆë‚˜ ì±„ìš¸ì§€ (1 = ê°€ë“)
+    [SerializeField] private bool rotate180 = false;     // ê¸€ìê°€ ê±°ê¾¸ë¡œ ë³´ì´ë©´ ì²´í¬
+
+    [Header("Aspect")]
+    [SerializeField] private bool matchAspect = true;    // ìº”ë²„ìŠ¤ ë†’ì´ë¥¼ Plane ë¹„ìœ¨ì— ë§ì¶° ëŠ˜ë¦¼ (Backgroundê°€ ê½‰ ì°¨ê²Œ ë¨)
 
     private void Start()
     {
         Fit();
     }
 
-    // ÀÎ½ºÆåÅÍ¿¡¼­ ? > Fit À» ´©¸£¸é ¿¡µğÅÍ¿¡¼­µµ ¹Ù·Î È®ÀÎ °¡´É
+    // ì¸ìŠ¤í™í„°ì—ì„œ â‹® > Fit ì„ ëˆ„ë¥´ë©´ ì—ë””í„°ì—ì„œë„ ë°”ë¡œ í™•ì¸ ê°€ëŠ¥
     [ContextMenu("Fit")]
     public void Fit()
     {
         if (surface == null)
         {
-            Debug.LogWarning("FitCanvasToSurface : Surface°¡ ¿¬°áµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogWarning("FitCanvasToSurface : Surfaceê°€ ì—°ê²°ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return;
         }
 
@@ -33,7 +36,7 @@ public class FitCanvasToSurface : MonoBehaviour
 
         canvas.renderMode = RenderMode.WorldSpace;
 
-        // Å¬¸¯ Ã³¸®¿¡ ÇÊ¿äÇÑ Ä«¸Ş¶ó
+        // í´ë¦­ ì²˜ë¦¬ì— í•„ìš”í•œ ì¹´ë©”ë¼
         if (canvas.worldCamera == null)
         {
             canvas.worldCamera = Camera.main;
@@ -41,15 +44,25 @@ public class FitCanvasToSurface : MonoBehaviour
 
         Bounds b = surface.bounds;
 
-        // À§Ä¡ : Plane Áß¾Ó, Ç¥¸é ¹Ù·Î À§
+        // ìº”ë²„ìŠ¤ ë¹„ìœ¨ì„ Planeì˜ ê°€ë¡œ:ì„¸ë¡œ(ê¹Šì´) ë¹„ìœ¨ì— ë§ì¶¤. í­ì€ ìœ ì§€í•˜ê³  ë†’ì´ë§Œ ì¡°ì •
+        float width = rt.sizeDelta.x;
+        float height = rt.sizeDelta.y;
+
+        if (matchAspect && b.size.x > 0.0001f)
+        {
+            height = width * (b.size.z / b.size.x);
+            rt.sizeDelta = new Vector2(width, height);
+        }
+
+        // ìœ„ì¹˜ : Plane ì¤‘ì•™, í‘œë©´ ë°”ë¡œ ìœ„
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.position = new Vector3(b.center.x, b.max.y + heightOffset, b.center.z);
 
-        // ¹æÇâ : À§¸¦ º¸µµ·Ï ´¯Èû
+        // ë°©í–¥ : ìœ„ë¥¼ ë³´ë„ë¡ ëˆ•í˜
         rt.rotation = Quaternion.Euler(90f, rotate180 ? 180f : 0f, 0f);
 
-        // Å©±â : Plane ¾È¿¡ µé¾î¿Àµµ·Ï (CanvasÀÇ Width/Height ºñÀ² À¯Áö)
-        float scale = Mathf.Min(b.size.x / rt.rect.width, b.size.z / rt.rect.height) * fill;
+        // í¬ê¸° : Plane ì•ˆì— ë“¤ì–´ì˜¤ë„ë¡
+        float scale = Mathf.Min(b.size.x / width, b.size.z / height) * fill;
         rt.localScale = Vector3.one * scale;
     }
 }
