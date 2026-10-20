@@ -3750,7 +3750,7 @@ MonoBehaviour:
   - {fileID: 572868324}
   - {fileID: 564938261}
   yeetTimerText: {fileID: 0}
-  yeetScoreGap: 50
+  yeetScoreGap: 1
   yeetDuration: 10
   onlyWhenPlayerBehind: 0
   yeetInOrder: 1

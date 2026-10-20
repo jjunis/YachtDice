@@ -612,7 +612,7 @@ public class DiceManager : MonoBehaviour
         HideYeet();
         RestartGame();
 
-        lastMessage = "YEET! 게임을 처음부터 다시 시작합니다";
+        lastMessage = "과거는 잊어라 미래를 가릴 뿐이니까.";
         UpdatePlayerUI();
     }
 
