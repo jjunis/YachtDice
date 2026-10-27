@@ -28,6 +28,9 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private Vector2 infoSize = new Vector2(500f, 200f);
     [SerializeField] private float infoFontSize = 28f;
 
+    [Header("Effect (선택)")]
+    [SerializeField] private SlamEffect slamEffect;  // 주먹으로 내려치는 연출. 없으면 바로 굴림
+
     [Header("AI")]
     [SerializeField] private float aiThinkDelay = 1.0f;   // AI 행동 사이 대기 시간
     [Range(0f, 1f)]
@@ -221,7 +224,15 @@ public class DiceManager : MonoBehaviour
         string who = currentTurn == Turn.AI ? "AI " : "";
         SetInfo($"{who}{rollCount}번째 굴리는 중...");
 
-        DoRoll();
+        if (slamEffect != null)
+        {
+            // 내려치는 순간에 DoRoll이 호출됨
+            yield return slamEffect.Play(DoRoll);
+        }
+        else
+        {
+            DoRoll();
+        }
 
         // 주사위가 전부 멈출 때까지 대기
         yield return new WaitUntil(() => !AnyRolling());
@@ -612,7 +623,7 @@ public class DiceManager : MonoBehaviour
         HideYeet();
         RestartGame();
 
-        lastMessage = "과거는 잊어라 미래를 가릴 뿐이니까.";
+        lastMessage = "YEET! 게임을 처음부터 다시 시작합니다";
         UpdatePlayerUI();
     }
 
