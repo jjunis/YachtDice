@@ -30,6 +30,7 @@ public class DiceManager : MonoBehaviour
 
     [Header("Effect (선택)")]
     [SerializeField] private SlamEffect slamEffect;  // 주먹으로 내려치는 연출. 없으면 바로 굴림
+    [SerializeField] private TableFlipEffect tableFlip; // YEET 성공 시 판 엎기 연출. 없으면 바로 재시작
 
     [Header("AI")]
     [SerializeField] private float aiThinkDelay = 1.0f;   // AI 행동 사이 대기 시간
@@ -41,7 +42,6 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private TMP_Text yeetTimerText;             // 남은 시간 표시 (선택)
     [SerializeField] private int yeetScoreGap = 30;              // 이 점수 이상 차이 나면 표시
     [SerializeField] private float yeetDuration = 6f;            // 버튼이 떠 있는 시간(초)
-    [SerializeField] private bool onlyWhenPlayerBehind = false;  // 체크하면 AI가 앞설 때만 표시
     [SerializeField] private bool yeetInOrder = true;            // 체크하면 Y→E→E→T 순서대로 눌러야 함
 
     [Header("YEET 랜덤 위치")]
@@ -334,9 +334,8 @@ public class DiceManager : MonoBehaviour
 
         int diff = aiBoard.GetTotal() - playerBoard.GetTotal(); // +면 AI가 앞섬
 
-        bool trigger = onlyWhenPlayerBehind
-            ? diff >= yeetScoreGap
-            : Mathf.Abs(diff) >= yeetScoreGap;
+        // AI가 플레이어보다 yeetScoreGap점 이상 앞설 때만 표시 (내가 이기고 있으면 표시 안 함)
+        bool trigger = diff >= yeetScoreGap;
 
         if (trigger)
         {
@@ -619,11 +618,25 @@ public class DiceManager : MonoBehaviour
             if (!pressed) return;
         }
 
-        // 4개 모두 눌렀으면 재시작
+        // 4개 모두 눌렀으면 판을 엎고 재시작
         HideYeet();
+        StartCoroutine(YeetSuccessRoutine());
+    }
+
+    private IEnumerator YeetSuccessRoutine()
+    {
+        isBusy = true;                 // 연출 중 Space / 주사위 클릭 막기
+        playerBoard.LockSelection();   // 연출 중 점수판 클릭 막기
+        SetInfo("YEET!!!");
+
+        if (tableFlip != null)
+        {
+            yield return tableFlip.Play();
+        }
+
         RestartGame();
 
-        lastMessage = "AI 게임 ㅈ같이하네";
+        lastMessage = "YEET! 게임을 처음부터 다시 시작합니다";
         UpdatePlayerUI();
     }
 
