@@ -31,6 +31,7 @@ public class DiceManager : MonoBehaviour
     [Header("Effect (선택)")]
     [SerializeField] private SlamEffect slamEffect;  // 주먹으로 내려치는 연출. 없으면 바로 굴림
     [SerializeField] private TableFlipEffect tableFlip; // YEET 성공 시 판 엎기 연출. 없으면 바로 재시작
+    [SerializeField] private CameraZoom cameraZoom;     // 주사위가 멈춘 뒤 확대해서 눈을 확인. 없으면 확대 안 함
 
     [Header("AI")]
     [SerializeField] private float aiThinkDelay = 1.0f;   // AI 행동 사이 대기 시간
@@ -43,6 +44,14 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private int yeetScoreGap = 30;              // 이 점수 이상 차이 나면 표시
     [SerializeField] private float yeetDuration = 6f;            // 버튼이 떠 있는 시간(초)
     [SerializeField] private bool yeetInOrder = true;            // 체크하면 Y→E→E→T 순서대로 눌러야 함
+
+    [Header("YEET 사운드 (선택)")]
+    [SerializeField] private AudioSource yeetAudioSource;   // 비워두면 자동으로 만들어 사용
+    [SerializeField] private AudioClip yeetShowClip;        // YEET 버튼이 나타날 때
+    [SerializeField] private AudioClip yeetLetterClip;      // 글자(Y/E/E/T) 하나를 올바르게 눌렀을 때
+    [SerializeField] private AudioClip yeetSuccessClip;     // 4글자를 모두 눌러 성공했을 때 (음성)
+    [Range(0f, 1f)]
+    [SerializeField] private float yeetVolume = 1f;
 
     [Header("YEET 랜덤 위치")]
     [SerializeField] private bool yeetRandomPosition = true;     // 켜면 버튼이 나타날 때마다 랜덤 위치
@@ -64,6 +73,14 @@ public class DiceManager : MonoBehaviour
     private void Awake()
     {
         if (cam == null) cam = Camera.main;
+
+        // YEET 사운드를 재생할 AudioSource (없으면 자동 생성)
+        if (yeetAudioSource == null)
+        {
+            yeetAudioSource = GetComponent<AudioSource>();
+            if (yeetAudioSource == null) yeetAudioSource = gameObject.AddComponent<AudioSource>();
+            yeetAudioSource.playOnAwake = false;
+        }
 
         SetupInfoTextLayout();
     }
@@ -203,6 +220,7 @@ public class DiceManager : MonoBehaviour
     private void HandlePlayerChosen(Category category, int score)
     {
         HideYeet();
+        if (cameraZoom != null) cameraZoom.ZoomOutNow();
 
         lastMessage = $"[{YachtScorer.Names[(int)category]}] {score}점 획득";
 
@@ -224,6 +242,12 @@ public class DiceManager : MonoBehaviour
         string who = currentTurn == Turn.AI ? "AI " : "";
         SetInfo($"{who}{rollCount}번째 굴리는 중...");
 
+        // 확대돼 있던 카메라를 먼저 원래대로 (주먹 연출 / 카메라 흔들림과 겹치지 않게)
+        if (cameraZoom != null)
+        {
+            yield return cameraZoom.ZoomOut();
+        }
+
         if (slamEffect != null)
         {
             // 내려치는 순간에 DoRoll이 호출됨
@@ -237,6 +261,12 @@ public class DiceManager : MonoBehaviour
         // 주사위가 전부 멈출 때까지 대기
         yield return new WaitUntil(() => !AnyRolling());
         yield return new WaitForSeconds(0.2f);
+
+        // 주사위가 멈췄으니 확대해서 눈을 보여줌 (기다리지 않고 바로 다음으로 진행)
+        if (cameraZoom != null)
+        {
+            cameraZoom.ZoomIn(dice);
+        }
 
         isBusy = false;
 
@@ -347,9 +377,16 @@ public class DiceManager : MonoBehaviour
         }
     }
 
+    private void PlayYeetSound(AudioClip clip)
+    {
+        if (clip == null || yeetAudioSource == null) return;
+        yeetAudioSource.PlayOneShot(clip, yeetVolume);
+    }
+
     private void ShowYeet()
     {
         HideYeet();
+        PlayYeetSound(yeetShowClip);
         yeetRoutine = StartCoroutine(YeetRoutine());
     }
 
@@ -610,6 +647,7 @@ public class DiceManager : MonoBehaviour
 
         yeetPressed[index] = true;
         yeetButtons[index].interactable = false; // 눌린 글자는 회색
+        PlayYeetSound(yeetLetterClip);
         yeetNext++;
 
         // 아직 안 눌린 버튼이 있으면 계속
@@ -625,6 +663,8 @@ public class DiceManager : MonoBehaviour
 
     private IEnumerator YeetSuccessRoutine()
     {
+        PlayYeetSound(yeetSuccessClip); // YEET 성공 음성
+        if (cameraZoom != null) yield return cameraZoom.ZoomOut();
         isBusy = true;                 // 연출 중 Space / 주사위 클릭 막기
         playerBoard.LockSelection();   // 연출 중 점수판 클릭 막기
         SetInfo("YEET!!!");
@@ -636,7 +676,7 @@ public class DiceManager : MonoBehaviour
 
         RestartGame();
 
-        lastMessage = "YEET! 게임을 처음부터 다시 시작합니다";
+        lastMessage = "게임 ㅈ같이하네";
         UpdatePlayerUI();
     }
 
