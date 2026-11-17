@@ -4897,10 +4897,10 @@ MonoBehaviour:
   - {fileID: 572868324}
   - {fileID: 564938261}
   yeetTimerText: {fileID: 0}
-  yeetScoreGap: 0
-  yeetDuration: 30
+  yeetScoreGap: 30
+  yeetDuration: 10
   yeetInOrder: 1
-  yeetAudioSource: {fileID: 0}
+  yeetAudioSource: {fileID: 1308584145}
   yeetShowClip: {fileID: 0}
   yeetLetterClip: {fileID: 0}
   yeetSuccessClip: {fileID: 0}
