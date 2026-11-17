@@ -3920,7 +3920,7 @@ MonoBehaviour:
   handAppearDuration: 0.4
   afterModel: {fileID: 973193913}
   afterInFrontOfCamera: 1
-  afterViewportPos: {x: 0.5, y: 0.5}
+  afterViewportPos: {x: 1, y: 1}
   afterUseWorldRotation: 1
   afterWorldEuler: {x: 0, y: 0, z: 90}
   afterDistance: 6
