@@ -19,6 +19,13 @@ public class TableFlipEffect : MonoBehaviour
     [SerializeField] private Vector3 handEulerOffset = Vector3.zero;  // 손 방향 보정
     [SerializeField] private float handAppearDuration = 0.4f;         // 손이 날아와 판을 잡는 시간
 
+    [Header("두 번째 손 (양손으로 엎기, 선택)")]
+    [SerializeField] private GameObject handModel2;      // 두 번째 손 모델. 비워 두면 한 손으로만 엎음
+    [SerializeField] private Transform handStartPoint2;  // 두 번째 손이 나타나는 위치
+    [SerializeField] private Transform handGrabPoint2;   // 두 번째 손이 잡는 지점 (판의 가까운 쪽 모서리의 반대편). Board Objects에도 넣을 것!
+    [SerializeField] private Vector3 handEulerOffset2 = Vector3.zero; // 두 번째 손 방향 보정
+    [SerializeField] private float handSpacing = 1.5f;   // 두 손을 중앙에서 좌우로 벌리는 거리 (한쪽 기준). 0이면 직접 놓은 위치 그대로 사용
+
     [Header("엎은 뒤 등장하는 모델 (선택)")]
     [SerializeField] private GameObject afterModel;      // 판을 엎은 뒤에 나오는 모델 (엿 날리는 손 등)
     [Header("  카메라 정면에 띄우기 (엿 날리기용)")]
@@ -103,6 +110,7 @@ public class TableFlipEffect : MonoBehaviour
         if (cam == null) cam = Camera.main;
 
         if (handModel != null) handModel.SetActive(false);
+        if (handModel2 != null) handModel2.SetActive(false);
         if (afterModel != null) afterModel.SetActive(false);
 
         // 판이 화면 밖으로 나갔는지 검사하기 위해 판에 속한 렌더러를 모아 둠
@@ -158,6 +166,21 @@ public class TableFlipEffect : MonoBehaviour
         tossWorld = Vector3.up * tossUp + away * tossAway;
         flyVelWorld = Vector3.up * flyUpSpeed + away * flyAwaySpeed + side * flySideSpeed;
         flyAccWorld = Vector3.up * flyUpAccel;
+
+        // 양손: 두 잡는 지점의 중간을 중심으로 카메라 기준 좌우로 벌림 (여러 번 실행해도 위치가 변하지 않음)
+        if (handSpacing > 0.0001f && handGrabPoint != null && handGrabPoint2 != null)
+        {
+            Vector3 center = (handGrabPoint.position + handGrabPoint2.position) * 0.5f;
+            handGrabPoint.position = center - side * handSpacing;
+            handGrabPoint2.position = center + side * handSpacing;
+
+            if (handStartPoint != null && handStartPoint2 != null)
+            {
+                Vector3 startCenter = (handStartPoint.position + handStartPoint2.position) * 0.5f;
+                handStartPoint.position = startCenter - side * handSpacing;
+                handStartPoint2.position = startCenter + side * handSpacing;
+            }
+        }
 
         Vector3 axis = flipAxis.sqrMagnitude < 0.0001f ? Vector3.right : flipAxis.normalized;
         Vector3 pivotPos = pivot.position;
@@ -229,10 +252,28 @@ public class TableFlipEffect : MonoBehaviour
         }
 
         // 1-2. 손 모델이 날아와 판 모서리를 잡음
-        if (handModel != null && handStartPoint != null && handGrabPoint != null)
+        bool hand1Ready = handModel != null && handStartPoint != null && handGrabPoint != null;
+        bool hand2Ready = handModel2 != null && handStartPoint2 != null && handGrabPoint2 != null;
+
+        if (hand1Ready || hand2Ready)
         {
-            handModel.SetActive(true);
-            yield return MoveModel(handModel.transform, handStartPoint, handGrabPoint, handEulerOffset, handAppearDuration);
+            // 두 손이 동시에 날아와서 판 모서리를 잡음
+            Coroutine appear2 = null;
+
+            if (hand2Ready)
+            {
+                handModel2.SetActive(true);
+                appear2 = StartCoroutine(MoveModel(handModel2.transform, handStartPoint2, handGrabPoint2, handEulerOffset2, handAppearDuration));
+            }
+
+            if (hand1Ready)
+            {
+                handModel.SetActive(true);
+                yield return MoveModel(handModel.transform, handStartPoint, handGrabPoint, handEulerOffset, handAppearDuration);
+            }
+
+            if (appear2 != null) yield return appear2;
+
             handFollowing = true;
         }
 
@@ -254,6 +295,7 @@ public class TableFlipEffect : MonoBehaviour
         // 손은 판을 놓고 사라짐
         handFollowing = false;
         if (handModel != null) handModel.SetActive(false);
+        if (handModel2 != null) handModel2.SetActive(false);
 
         // 4. 엎어진 판이 날아가는 동안 + 다른 모델 등장
         Coroutine fly = StartCoroutine(FlyRoutine(boardStart, pivotPos, axis));
@@ -317,6 +359,7 @@ public class TableFlipEffect : MonoBehaviour
         // 연출용 모델 정리
         handFollowing = false;
         if (handModel != null) handModel.SetActive(false);
+        if (handModel2 != null) handModel2.SetActive(false);
         if (afterModel != null) afterModel.SetActive(false);
 
         // 판도 오차 없이 원래 값으로 고정
@@ -475,6 +518,13 @@ public class TableFlipEffect : MonoBehaviour
             handModel.transform.SetPositionAndRotation(
                 handGrabPoint.position,
                 handGrabPoint.rotation * Quaternion.Euler(handEulerOffset));
+        }
+
+        if (handFollowing && handModel2 != null && handGrabPoint2 != null)
+        {
+            handModel2.transform.SetPositionAndRotation(
+                handGrabPoint2.position,
+                handGrabPoint2.rotation * Quaternion.Euler(handEulerOffset2));
         }
     }
 
