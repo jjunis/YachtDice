@@ -45,6 +45,12 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private float yeetDuration = 6f;            // 버튼이 떠 있는 시간(초)
     [SerializeField] private bool yeetInOrder = true;            // 체크하면 Y→E→E→T 순서대로 눌러야 함
 
+    [Header("규칙 설명 (게임 시작 전)")]
+    [SerializeField] private GameObject rulesPanel;       // 규칙 이미지가 들어 있는 패널. 비우면 규칙 설명 없이 바로 시작
+    [SerializeField] private TMP_Text rulesTimerText;     // 남은 시간 표시 (선택)
+    [SerializeField] private float rulesDuration = 10f;   // 규칙을 보여주는 시간(초)
+    [SerializeField] private bool rulesAllowSkip = true;  // 체크하면 Space / Enter / 마우스 클릭으로 건너뛸 수 있음
+
     [Header("YEET 사운드 (선택)")]
     [SerializeField] private AudioSource yeetAudioSource;   // 비워두면 자동으로 만들어 사용
     [SerializeField] private AudioClip yeetShowClip;        // YEET 버튼이 나타날 때
@@ -117,7 +123,53 @@ public class DiceManager : MonoBehaviour
 
         SetYeetVisible(false);
 
-        StartPlayerTurn();
+        // 첫 턴을 시작하기 전에 규칙 이미지를 보여줌
+        StartCoroutine(StartWithRules());
+    }
+
+    // 규칙 이미지를 rulesDuration초 동안 보여준 뒤 첫 턴을 시작
+    private IEnumerator StartWithRules()
+    {
+        if (rulesPanel != null && rulesDuration > 0f)
+        {
+            isBusy = true;   // 규칙을 보는 동안 Space / 주사위 클릭 입력 막기
+            rulesPanel.SetActive(true);
+
+            float remain = rulesDuration;
+
+            while (remain > 0f)
+            {
+                if (rulesTimerText != null)
+                {
+                    string skipHint = rulesAllowSkip ? "  (Space / 클릭으로 건너뛰기)" : "";
+                    rulesTimerText.text = $"{Mathf.CeilToInt(remain)}초 후 게임이 시작됩니다{skipHint}";
+                }
+
+                if (rulesAllowSkip && SkipPressed())
+                {
+                    break;
+                }
+
+                remain -= Time.deltaTime;
+                yield return null;
+            }
+
+            rulesPanel.SetActive(false);
+        }
+
+        StartPlayerTurn();   // isBusy도 여기서 false로 돌아감
+    }
+
+    private bool SkipPressed()
+    {
+        Keyboard keyboard = Keyboard.current;
+        Mouse mouse = Mouse.current;
+
+        bool key = keyboard != null &&
+                   (keyboard.spaceKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame);
+        bool click = mouse != null && mouse.leftButton.wasPressedThisFrame;
+
+        return key || click;
     }
 
     private void OnDestroy()
@@ -676,7 +728,7 @@ public class DiceManager : MonoBehaviour
 
         RestartGame();
 
-        lastMessage = "게임 ㅈ같이하네";
+        lastMessage = "AI 게임 더럽게하네";
         UpdatePlayerUI();
     }
 
