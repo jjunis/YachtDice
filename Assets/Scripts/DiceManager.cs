@@ -50,6 +50,7 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private TMP_Text rulesTimerText;     // 남은 시간 표시 (선택)
     [SerializeField] private float rulesDuration = 10f;   // 규칙을 보여주는 시간(초)
     [SerializeField] private bool rulesAllowSkip = true;  // 체크하면 Space / Enter / 마우스 클릭으로 건너뛸 수 있음
+    [SerializeField] private Button rulesButton;          // 좌측 하단의 규칙 보기 버튼 (선택). 누르면 규칙 이미지를 다시 보여줌
 
     [Header("YEET 사운드 (선택)")]
     [SerializeField] private AudioSource yeetAudioSource;   // 비워두면 자동으로 만들어 사용
@@ -70,6 +71,9 @@ public class DiceManager : MonoBehaviour
     private bool isBusy = false;     // 굴러가는 중
     private bool gameOver = false;
     private string lastMessage = "";
+
+    private bool rulesViewing = false;   // 규칙 버튼으로 규칙을 보고 있는 중
+    private int rulesOpenFrame = -1;
 
     private Coroutine yeetRoutine;
     private bool[] yeetPressed;
@@ -123,6 +127,11 @@ public class DiceManager : MonoBehaviour
 
         SetYeetVisible(false);
 
+        if (rulesButton != null)
+        {
+            rulesButton.onClick.AddListener(OpenRules);
+        }
+
         // 첫 턴을 시작하기 전에 규칙 이미지를 보여줌
         StartCoroutine(StartWithRules());
     }
@@ -160,6 +169,31 @@ public class DiceManager : MonoBehaviour
         StartPlayerTurn();   // isBusy도 여기서 false로 돌아감
     }
 
+    // 좌측 하단 규칙 버튼을 눌렀을 때: 규칙 이미지를 다시 보여줌
+    private void OpenRules()
+    {
+        if (rulesPanel == null || rulesViewing) return;
+
+        rulesViewing = true;
+        rulesOpenFrame = Time.frameCount;
+        rulesPanel.SetActive(true);
+
+        if (rulesTimerText != null)
+        {
+            rulesTimerText.text = "Space / Esc / 클릭으로 닫기";
+        }
+    }
+
+    private void CloseRules()
+    {
+        rulesViewing = false;
+
+        if (rulesPanel != null)
+        {
+            rulesPanel.SetActive(false);
+        }
+    }
+
     private bool SkipPressed()
     {
         Keyboard keyboard = Keyboard.current;
@@ -174,6 +208,11 @@ public class DiceManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (rulesButton != null)
+        {
+            rulesButton.onClick.RemoveListener(OpenRules);
+        }
+
         if (playerBoard != null)
         {
             playerBoard.OnCategoryChosen -= HandlePlayerChosen;
@@ -192,6 +231,21 @@ public class DiceManager : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
+
+        // 규칙을 보는 동안에는 게임 입력을 막고, Space / Esc / Enter / 클릭으로 닫음
+        if (rulesViewing)
+        {
+            bool closeKey = keyboard != null &&
+                (keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame || keyboard.enterKey.wasPressedThisFrame);
+            bool closeClick = mouse != null && mouse.leftButton.wasPressedThisFrame;
+
+            if ((closeKey || closeClick) && Time.frameCount > rulesOpenFrame)
+            {
+                CloseRules();
+            }
+
+            return;
+        }
 
         if (gameOver)
         {
@@ -728,7 +782,7 @@ public class DiceManager : MonoBehaviour
 
         RestartGame();
 
-        lastMessage = "AI 게임 더럽게하네";
+        lastMessage = "게임 더럽게하네";
         UpdatePlayerUI();
     }
 
