@@ -3931,12 +3931,15 @@ MonoBehaviour:
   afterAppearDuration: 0.35
   afterStay: 0.8
   pivot: {fileID: 111956095}
+  autoDirection: 1
   flipAxis: {x: 1, y: 0, z: 0}
   flipAngle: 180
-  tossOffset: {x: 0, y: 1, z: 2}
-  flyVelocity: {x: 0, y: 4, z: 16}
-  flyGravity: {x: 0, y: 0, z: 0}
-  flyAcceleration: {x: 0, y: 0, z: 25}
+  tossUp: 1.5
+  tossAway: 1.5
+  flyUpSpeed: 12
+  flyAwaySpeed: 6
+  flySideSpeed: 0
+  flyUpAccel: 20
   flyDuration: 0.8
   flyUntilOffScreen: 1
   flyMaxDuration: 3
@@ -3946,7 +3949,10 @@ MonoBehaviour:
   windUpDuration: 0.25
   flipDuration: 0.3
   returnDuration: 0.6
-  diceLaunchVelocity: {x: 0, y: 7, z: 4}
+  diceUpSpeed: 14
+  diceAwaySpeed: 6
+  diceSideSpeed: 0
+  diceIgnoreGravity: 1
   diceRandomPower: 2.5
   diceSpinPower: 20
   cam: {fileID: 0}

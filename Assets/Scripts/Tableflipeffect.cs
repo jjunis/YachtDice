@@ -38,16 +38,19 @@ public class TableFlipEffect : MonoBehaviour
 
     [Header("회전 축")]
     [SerializeField] private Transform pivot;            // 판의 '먼 쪽 모서리'에 둔 빈 오브젝트 (이 점을 축으로 뒤집힘)
-    [SerializeField] private Vector3 flipAxis = Vector3.right;  // 회전 축 (월드 기준)
+    [SerializeField] private bool autoDirection = true;  // 체크하면 자동: 카메라 기준으로 먼 쪽 모서리를 축으로, 손이 잡은 가까운 쪽이 위로 올라가며 넘어감 (아래 Pivot/Flip Axis/부호 신경 안 써도 됨)
+    [SerializeField] private Vector3 flipAxis = Vector3.right;  // 회전 축 (월드 기준). Auto Direction을 끈 경우에만 사용
     [SerializeField] private float flipAngle = 180f;     // 엎는 각도 (180 = 완전히 뒤집힘. 반대로 넘어가면 -180)
 
-    [Header("위로 던지기")]
-    [SerializeField] private Vector3 tossOffset = new Vector3(0f, 2f, 6f); // 판이 날아가는 거리 (월드 기준 X, Y, Z). Z가 플러스 = 카메라에서 먼 쪽(화면 위쪽)
+    [Header("엎을 때 밀려나는 거리")]
+    [SerializeField] private float tossUp = 1.5f;        // 엎으면서 위로 솟구치는 높이
+    [SerializeField] private float tossAway = 1.5f;      // 엎으면서 카메라 반대쪽(앞쪽)으로 밀려나는 거리
 
     [Header("날아가기 (엎은 뒤 판이 날아감)")]
-    [SerializeField] private Vector3 flyVelocity = new Vector3(0f, 4f, 16f);  // 날아가는 속도 (월드 기준). Z가 플러스 = 카메라 반대쪽(화면 위쪽)
-    [SerializeField] private Vector3 flyGravity = new Vector3(0f, -6f, 0f);   // 중력 (아래로 휘어지는 정도). 0이면 직선으로 날아감
-    [SerializeField] private Vector3 flyAcceleration = new Vector3(0f, 0f, 25f); // 점점 빨라지는 정도. 화면 밖으로 확실히 나가게 해 줌
+    [SerializeField] private float flyUpSpeed = 12f;       // 위로(하늘로) 날아가는 속도
+    [SerializeField] private float flyAwaySpeed = 6f;      // 카메라 반대쪽(앞쪽)으로 날아가는 속도
+    [SerializeField] private float flySideSpeed = 0f;      // 옆으로 날아가는 속도 (플러스 = 오른쪽, 마이너스 = 왼쪽)
+    [SerializeField] private float flyUpAccel = 20f;       // 위로 점점 빨라지는 정도. 화면 밖으로 확실히 나가게 해 줌
     [SerializeField] private float flyDuration = 0.8f;                         // 최소로 날아가는 시간(초)
     [SerializeField] private bool flyUntilOffScreen = true;                    // 체크하면 판이 화면 밖으로 완전히 나갈 때까지 계속 날아감
     [SerializeField] private float flyMaxDuration = 3f;                        // 화면 밖으로 안 나가도 이 시간이 지나면 끝냄(안전장치)
@@ -61,7 +64,10 @@ public class TableFlipEffect : MonoBehaviour
     [SerializeField] private float returnDuration = 0.6f;// 원래 자리로 돌아오는 시간
 
     [Header("주사위 튕김")]
-    [SerializeField] private Vector3 diceLaunchVelocity = new Vector3(0f, 7f, 4f); // 위쪽 + 먼 쪽으로
+    [SerializeField] private float diceUpSpeed = 14f;        // 주사위가 위로(하늘로) 날아가는 속도
+    [SerializeField] private float diceAwaySpeed = 6f;       // 주사위가 카메라 반대쪽(앞쪽)으로 날아가는 속도 (판과 같은 방향)
+    [SerializeField] private float diceSideSpeed = 0f;       // 주사위가 옆으로 날아가는 속도 (플러스 = 오른쪽)
+    [SerializeField] private bool diceIgnoreGravity = true;  // 체크하면 중력을 꺼서 주사위가 떨어지지 않고 계속 날아감 (화면 밖으로 사라짐)
     [SerializeField] private float diceRandomPower = 2.5f;   // 방향 무작위 정도
     [SerializeField] private float diceSpinPower = 20f;      // 회전 세기
 
@@ -82,8 +88,15 @@ public class TableFlipEffect : MonoBehaviour
 
     private bool handFollowing = false;
     private readonly List<Renderer> boardRenderers = new List<Renderer>();
+    private Vector3 dirAway = Vector3.forward;   // 카메라가 바라보는 수평 방향
+    private Vector3 dirSide = Vector3.right;     // 카메라 오른쪽 수평 방향
+    private float effFlipAngle;         // 실제로 쓰는 엎는 각도 (자동 방향 반영)
+    private float effWindUp;            // 실제로 쓰는 준비 기울기
+    private Vector3 tossWorld;          // 엎을 때 밀려나는 월드 방향 벡터
+    private Vector3 flyVelWorld;        // 날아가는 월드 속도
+    private Vector3 flyAccWorld;        // 날아가는 월드 가속도
     private Vector3 flyOffset = Vector3.zero;   // 날아가는 동안의 추가 이동량
-    private float lift = 0f;   // 던지기 진행도 (0 = 제자리, 1 = 가장 멀리). 실제 이동량 = tossOffset * lift
+    private float lift = 0f;   // 던지기 진행도 (0 = 제자리, 1 = 가장 멀리). 실제 이동량 = tossWorld * lift
 
     private void Awake()
     {
@@ -133,8 +146,56 @@ public class TableFlipEffect : MonoBehaviour
         flyOffset = Vector3.zero;
         lift = 0f;
 
+        // 방향 계산: 위 = 월드 위쪽, 앞쪽 = 카메라가 바라보는 수평 방향, 옆 = 카메라 오른쪽
+        Vector3 away = cam != null ? Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up) : Vector3.forward;
+        if (away.sqrMagnitude < 0.0001f) away = Vector3.forward;
+        away.Normalize();
+        Vector3 side = Vector3.Cross(Vector3.up, away);
+
+        dirAway = away;
+        dirSide = side;
+
+        tossWorld = Vector3.up * tossUp + away * tossAway;
+        flyVelWorld = Vector3.up * flyUpSpeed + away * flyAwaySpeed + side * flySideSpeed;
+        flyAccWorld = Vector3.up * flyUpAccel;
+
         Vector3 axis = flipAxis.sqrMagnitude < 0.0001f ? Vector3.right : flipAxis.normalized;
         Vector3 pivotPos = pivot.position;
+
+        if (autoDirection)
+        {
+            // 회전 축 = 카메라 오른쪽 방향, 회전 중심 = 판 전체의 카메라에서 먼 쪽 모서리
+            axis = side;
+
+            bool hasBounds = false;
+            Bounds union = new Bounds();
+            foreach (Renderer r in boardRenderers)
+            {
+                if (r == null || !r.enabled) continue;
+                if (!hasBounds) { union = r.bounds; hasBounds = true; }
+                else union.Encapsulate(r.bounds);
+            }
+
+            if (hasBounds)
+            {
+                float half = Mathf.Abs(away.x) * union.extents.x + Mathf.Abs(away.y) * union.extents.y + Mathf.Abs(away.z) * union.extents.z;
+                Vector3 far = union.center + away * half;
+                pivotPos = new Vector3(far.x, pivot.position.y, far.z);
+            }
+
+            // 손이 잡는 쪽(가까운 쪽)이 위로 올라가는 방향으로 회전하도록 부호 결정
+            Vector3 refPoint = handGrabPoint != null ? handGrabPoint.position : boardObjects[0].position;
+            float liftDir = Vector3.Cross(axis, refPoint - pivotPos).y;
+            float dirSign = Mathf.Abs(liftDir) > 0.01f ? Mathf.Sign(liftDir) : 1f;
+
+            effFlipAngle = Mathf.Abs(flipAngle) * dirSign;
+            effWindUp = -Mathf.Abs(windUpAngle) * dirSign;
+        }
+        else
+        {
+            effFlipAngle = flipAngle;
+            effWindUp = windUpAngle;
+        }
 
         // 1. 원래 상태 저장
         Pose[] boardStart = new Pose[boardObjects.Length];
@@ -176,7 +237,7 @@ public class TableFlipEffect : MonoBehaviour
         }
 
         // 2. 엎기 전 살짝 기울이기 (반대 방향으로 힘을 모음)
-        yield return Tilt(boardStart, pivotPos, axis, 0f, windUpAngle, 0f, 0f, windUpDuration, EaseOut);
+        yield return Tilt(boardStart, pivotPos, axis, 0f, effWindUp, 0f, 0f, windUpDuration, EaseOut);
 
         // 3. 확 뒤집기
         if (audioSource != null && flipClip != null) audioSource.PlayOneShot(flipClip);
@@ -186,7 +247,7 @@ public class TableFlipEffect : MonoBehaviour
         LaunchDice(diceBody);
 
         // 한쪽 모서리를 들어 올리며 위로 던짐 (회전 + 위로 솟구침)
-        yield return Tilt(boardStart, pivotPos, axis, windUpAngle, flipAngle, 0f, 1f, flipDuration, EaseOut);
+        yield return Tilt(boardStart, pivotPos, axis, effWindUp, effFlipAngle, 0f, 1f, flipDuration, EaseOut);
 
         onFlipped?.Invoke();
 
@@ -287,7 +348,7 @@ public class TableFlipEffect : MonoBehaviour
     // 엎어진 판이 포물선을 그리며 날아감
     private IEnumerator FlyRoutine(Pose[] start, Vector3 pivotPos, Vector3 axis)
     {
-        float sign = flipAngle >= 0f ? 1f : -1f;
+        float sign = effFlipAngle >= 0f ? 1f : -1f;
         float time = 0f;
         float limit = flyUntilOffScreen ? Mathf.Max(flyDuration, flyMaxDuration) : flyDuration;
 
@@ -295,10 +356,10 @@ public class TableFlipEffect : MonoBehaviour
         {
             time += Time.deltaTime;
 
-            flyOffset = flyVelocity * time + 0.5f * (flyGravity + flyAcceleration) * time * time;
+            flyOffset = flyVelWorld * time + 0.5f * flyAccWorld * time * time;
             float spin = flyExtraSpin * sign * Mathf.Clamp01(time / flyDuration);
 
-            ApplyAngle(start, pivotPos, axis, flipAngle + spin);
+            ApplyAngle(start, pivotPos, axis, effFlipAngle + spin);
 
             // 최소 시간이 지난 뒤, 판이 화면 밖으로 완전히 나가면 끝
             if (flyUntilOffScreen && time >= flyDuration && !IsBoardOnScreen())
@@ -333,8 +394,8 @@ public class TableFlipEffect : MonoBehaviour
     // 날아간 판이 천천히 제자리로 돌아옴 (Smooth Return을 켠 경우)
     private IEnumerator ReturnRoutine(Pose[] start, Vector3 pivotPos, Vector3 axis)
     {
-        float sign = flipAngle >= 0f ? 1f : -1f;
-        float fromAngle = flipAngle + flyExtraSpin * sign;
+        float sign = effFlipAngle >= 0f ? 1f : -1f;
+        float fromAngle = effFlipAngle + flyExtraSpin * sign;
         Vector3 fromOffset = flyOffset;
         float fromLift = lift;
         float time = 0f;
@@ -403,7 +464,7 @@ public class TableFlipEffect : MonoBehaviour
         {
             if (boardObjects[i] == null) continue;
 
-            Vector3 newPos = pivotPos + rot * (start[i].position - pivotPos) + tossOffset * lift + flyOffset;
+            Vector3 newPos = pivotPos + rot * (start[i].position - pivotPos) + tossWorld * lift + flyOffset;
             Quaternion newRot = rot * start[i].rotation;
             boardObjects[i].SetPositionAndRotation(newPos, newRot);
         }
@@ -424,14 +485,20 @@ public class TableFlipEffect : MonoBehaviour
             if (rb == null) continue;
 
             rb.isKinematic = false;
-            rb.useGravity = true;
+            rb.useGravity = !diceIgnoreGravity;
 
-            Vector3 randomDir = new Vector3(
-                UnityEngine.Random.Range(-1f, 1f),
-                UnityEngine.Random.Range(0f, 1f),
-                UnityEngine.Random.Range(-1f, 1f)) * diceRandomPower;
+            // 판과 같은 기준(위 / 카메라 앞쪽 / 카메라 오른쪽)으로 방향을 정함
+            Vector3 launch =
+                Vector3.up * diceUpSpeed +
+                dirAway * diceAwaySpeed +
+                dirSide * diceSideSpeed;
 
-            rb.linearVelocity = diceLaunchVelocity + randomDir;
+            Vector3 randomDir =
+                (dirSide * UnityEngine.Random.Range(-1f, 1f) +
+                 Vector3.up * UnityEngine.Random.Range(0f, 1f) +
+                 dirAway * UnityEngine.Random.Range(-1f, 1f)) * diceRandomPower;
+
+            rb.linearVelocity = launch + randomDir;
             rb.angularVelocity = UnityEngine.Random.insideUnitSphere * diceSpinPower;
         }
     }
