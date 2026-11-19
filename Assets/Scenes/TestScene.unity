@@ -3436,7 +3436,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraZoom
   cam: {fileID: 330585545}
   topDownView: 1
-  fitPadding: 1
+  fitPadding: 3
   minHeight: 2
   zoomRatio: 0.45
   focusOffset: {x: 0, y: 0, z: 0}
