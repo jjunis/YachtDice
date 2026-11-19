@@ -1706,7 +1706,7 @@ Transform:
   m_GameObject: {fileID: 639869213}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 21.8, y: -0.67, z: -2.6}
+  m_LocalPosition: {x: 21.8, y: -0.67, z: -27}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3949,7 +3949,7 @@ MonoBehaviour:
   windUpDuration: 0.25
   flipDuration: 0.3
   returnDuration: 0.6
-  diceUpSpeed: 14
+  diceUpSpeed: 24
   diceAwaySpeed: 6
   diceSideSpeed: 0
   diceIgnoreGravity: 1
