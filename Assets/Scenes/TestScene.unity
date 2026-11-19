@@ -5647,7 +5647,7 @@ MonoBehaviour:
   - {fileID: 572868324}
   - {fileID: 564938261}
   yeetTimerText: {fileID: 0}
-  yeetScoreGap: 0
+  yeetScoreGap: 30
   yeetDuration: 10
   yeetInOrder: 1
   yeetAudioSource: {fileID: 1308584145}
