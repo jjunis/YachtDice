@@ -3440,7 +3440,7 @@ MonoBehaviour:
   minHeight: 2
   trayTargets:
   - {fileID: 1857823977}
-  trayPadding: 0.1
+  trayPadding: 0
   cropOutsideTray: 1
   zoomRatio: 0.45
   focusOffset: {x: 0, y: 0, z: 0}
