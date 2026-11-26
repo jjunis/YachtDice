@@ -38,6 +38,9 @@ public class CameraZoom : MonoBehaviour
     private Vector3 basePos;
     private Quaternion baseRot;
 
+    // 확대 중(확대하는 중 ~ 원래대로 돌아오기 전까지)이면 true
+    public bool IsZoomed => hasBase;
+
     private void Awake()
     {
         if (cam == null) cam = Camera.main;

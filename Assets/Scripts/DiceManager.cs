@@ -36,7 +36,22 @@ public class DiceManager : MonoBehaviour
     [Header("AI")]
     [SerializeField] private float aiThinkDelay = 1.0f;   // AI 행동 사이 대기 시간
     [Range(0f, 1f)]
-    [SerializeField] private float aiMistakeChance = 0.1f; // 클수록 AI가 실수를 많이 함 (쉬움)
+    [SerializeField] private float aiMistakeChance = 0.1f; // (난이도 선택 패널을 쓰면 아래 값으로 자동 덮어씀)
+
+    [Header("AI 난이도 선택")]
+    [SerializeField] private GameObject difficultyPanel;   // 난이도 선택 패널. 비우면 난이도 선택 없이 위 aiMistakeChance로 진행
+    [SerializeField] private Button easyButton;
+    [SerializeField] private Button normalButton;
+    [SerializeField] private Button hardButton;
+    [Range(0f, 1f)][SerializeField] private float easyMistake = 0.35f;   // 쉬움: 실수 확률
+    [SerializeField] private int easyTrials = 15;                         // 쉬움: AI 시뮬레이션 횟수(적을수록 멍청)
+    [Range(0f, 1f)][SerializeField] private float normalMistake = 0.1f;
+    [SerializeField] private int normalTrials = 60;
+    [Range(0f, 1f)][SerializeField] private float hardMistake = 0f;      // 어려움: 실수 없음
+    [SerializeField] private int hardTrials = 150;
+    [SerializeField] private TMP_Text difficultyText;      // 우측 상단에 "현재 난이도 : 쉬움" 표시 (비워도 됨)
+    private int aiTrials = 60;
+    private bool difficultyChosen;
 
     [Header("YEET")]
     [SerializeField] private Button[] yeetButtons;               // Y, E, E, T 순서로 4개
@@ -132,13 +147,48 @@ public class DiceManager : MonoBehaviour
             rulesButton.onClick.AddListener(OpenRules);
         }
 
-        // 첫 턴을 시작하기 전에 규칙 이미지를 보여줌
+        if (difficultyPanel != null)
+        {
+            if (easyButton != null) easyButton.onClick.AddListener(() => ChooseDifficulty(easyMistake, easyTrials, "쉬움"));
+            if (normalButton != null) normalButton.onClick.AddListener(() => ChooseDifficulty(normalMistake, normalTrials, "보통"));
+            if (hardButton != null) hardButton.onClick.AddListener(() => ChooseDifficulty(hardMistake, hardTrials, "어려움"));
+        }
+        else
+        {
+            difficultyChosen = true;
+        }
+
+        // 난이도 선택 → 규칙 이미지 → 첫 턴
         StartCoroutine(StartWithRules());
     }
 
     // 규칙 이미지를 rulesDuration초 동안 보여준 뒤 첫 턴을 시작
+    private void ChooseDifficulty(float mistake, int trials, string label)
+    {
+        if (difficultyText != null)
+        {
+            difficultyText.gameObject.SetActive(true);
+            difficultyText.text = $"현재 난이도 : {label}";
+        }
+
+        aiMistakeChance = mistake;
+        aiTrials = trials;
+        difficultyChosen = true;
+
+        if (difficultyPanel != null) difficultyPanel.SetActive(false);
+    }
+
     private IEnumerator StartWithRules()
     {
+        if (!difficultyChosen)
+        {
+            isBusy = true;   // 선택하는 동안 입력 막기
+            difficultyPanel.SetActive(true);
+            if (difficultyText != null) difficultyText.gameObject.SetActive(false);
+
+            while (!difficultyChosen) yield return null;
+        }
+
         if (rulesPanel != null && rulesDuration > 0f)
         {
             isBusy = true;   // 규칙을 보는 동안 Space / 주사위 클릭 입력 막기
@@ -231,6 +281,13 @@ public class DiceManager : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
+
+        // 카메라가 줌 중일 때는 난이도 글자를 숨기고, 줌이 풀리면 다시 표시
+        if (difficultyText != null && difficultyChosen)
+        {
+            bool show = cameraZoom == null || !cameraZoom.IsZoomed;
+            if (difficultyText.gameObject.activeSelf != show) difficultyText.gameObject.SetActive(show);
+        }
 
         // 규칙을 보는 동안에는 게임 입력을 막고, Space / Esc / Enter / 클릭으로 닫음
         if (rulesViewing)
@@ -425,7 +482,7 @@ public class DiceManager : MonoBehaviour
             if (rollCount >= maxRolls) break;
 
             // 어떤 주사위를 고정할지 결정
-            bool[] hold = YachtAI.ChooseHolds(values, used, aiMistakeChance);
+            bool[] hold = YachtAI.ChooseHolds(values, used, aiMistakeChance, aiTrials);
 
             bool allHeld = true;
             for (int i = 0; i < dice.Length; i++)
@@ -782,7 +839,7 @@ public class DiceManager : MonoBehaviour
 
         RestartGame();
 
-        lastMessage = "게임 더럽게하네";
+        lastMessage = "AI 게임 더럽게 하네";
         UpdatePlayerUI();
     }
 
