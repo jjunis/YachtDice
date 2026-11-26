@@ -831,7 +831,7 @@ public class DiceManager : MonoBehaviour
         if (cameraZoom != null) yield return cameraZoom.ZoomOut();
         isBusy = true;                 // 연출 중 Space / 주사위 클릭 막기
         playerBoard.LockSelection();   // 연출 중 점수판 클릭 막기
-        SetInfo("YEET!!!");
+        SetInfo("안해 시발!!");
 
         if (tableFlip != null)
         {
@@ -842,7 +842,7 @@ public class DiceManager : MonoBehaviour
         HideYeet();
         gameOver = true;
         isBusy = false;
-        SetInfo("AI 게임 더럽게 하네 \nSpace : 같은 난이도로 다시 시작\nR : 난이도 선택");
+        SetInfo("AI 게임 좆같이 하네 \nSpace : 같은 난이도로 다시 시작\nR : 난이도 선택");
     }
 
     // ==========================================

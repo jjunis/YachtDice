@@ -6881,7 +6881,7 @@ MonoBehaviour:
   - {fileID: 564938261}
   yeetTimerText: {fileID: 0}
   yeetScoreGap: 30
-  yeetDuration: 5
+  yeetDuration: 10
   yeetInOrder: 1
   rulesPanel: {fileID: 1853337087}
   rulesTimerText: {fileID: 589196730}
