@@ -3438,6 +3438,10 @@ MonoBehaviour:
   topDownView: 1
   fitPadding: 3
   minHeight: 2
+  trayTargets:
+  - {fileID: 1857823977}
+  trayPadding: 0.1
+  cropOutsideTray: 1
   zoomRatio: 0.45
   focusOffset: {x: 0, y: 0, z: 0}
   zoomInDuration: 0.35
@@ -6355,7 +6359,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 1.7000122, y: 2.0999756}
+  m_AnchoredPosition: {x: 1.6999512, y: 2.0999756}
   m_SizeDelta: {x: 90, y: 90}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1826315211
