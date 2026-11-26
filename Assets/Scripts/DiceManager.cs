@@ -43,11 +43,11 @@ public class DiceManager : MonoBehaviour
     [SerializeField] private Button easyButton;
     [SerializeField] private Button normalButton;
     [SerializeField] private Button hardButton;
-    [Range(0f, 1f)][SerializeField] private float easyMistake = 0.35f;   // 쉬움: 실수 확률
+    [Range(0f, 1f)] [SerializeField] private float easyMistake = 0.35f;   // 쉬움: 실수 확률
     [SerializeField] private int easyTrials = 15;                         // 쉬움: AI 시뮬레이션 횟수(적을수록 멍청)
-    [Range(0f, 1f)][SerializeField] private float normalMistake = 0.1f;
+    [Range(0f, 1f)] [SerializeField] private float normalMistake = 0.1f;
     [SerializeField] private int normalTrials = 60;
-    [Range(0f, 1f)][SerializeField] private float hardMistake = 0f;      // 어려움: 실수 없음
+    [Range(0f, 1f)] [SerializeField] private float hardMistake = 0f;      // 어려움: 실수 없음
     [SerializeField] private int hardTrials = 150;
     [SerializeField] private TMP_Text difficultyText;      // 우측 상단에 "현재 난이도 : 쉬움" 표시 (비워도 됨)
     private int aiTrials = 60;
@@ -178,7 +178,7 @@ public class DiceManager : MonoBehaviour
         if (difficultyPanel != null) difficultyPanel.SetActive(false);
     }
 
-    private IEnumerator StartWithRules()
+    private IEnumerator StartWithRules(bool showRules = true)
     {
         if (!difficultyChosen)
         {
@@ -189,7 +189,7 @@ public class DiceManager : MonoBehaviour
             while (!difficultyChosen) yield return null;
         }
 
-        if (rulesPanel != null && rulesDuration > 0f)
+        if (showRules && rulesPanel != null && rulesDuration > 0f)
         {
             isBusy = true;   // 규칙을 보는 동안 Space / 주사위 클릭 입력 막기
             rulesPanel.SetActive(true);
@@ -306,9 +306,10 @@ public class DiceManager : MonoBehaviour
 
         if (gameOver)
         {
-            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            if (keyboard != null)
             {
-                RestartGame();
+                if (keyboard.spaceKey.wasPressedThisFrame) RestartGame(false);       // 같은 난이도로 다시 시작
+                else if (keyboard.rKey.wasPressedThisFrame) RestartGame(true);       // 난이도 선택 화면으로
             }
             return;
         }
@@ -837,10 +838,11 @@ public class DiceManager : MonoBehaviour
             yield return tableFlip.Play();
         }
 
-        RestartGame();
-
-        lastMessage = "AI 게임 더럽게 하네";
-        UpdatePlayerUI();
+        // 바로 재시작하지 않고 R 키를 기다림 (R → 난이도 선택 화면)
+        HideYeet();
+        gameOver = true;
+        isBusy = false;
+        SetInfo("AI 게임 더럽게 하네 \nSpace : 같은 난이도로 다시 시작\nR : 난이도 선택");
     }
 
     // ==========================================
@@ -861,12 +863,12 @@ public class DiceManager : MonoBehaviour
             $"{lastMessage}\n" +
             $"게임 종료 - {result}\n" +
             $"나 {p} : AI {a}\n" +
-            "R 키로 새 게임");
+            "Space : 같은 난이도로 다시 시작\nR : 난이도 선택");
 
         return true;
     }
 
-    private void RestartGame()
+    private void RestartGame(bool chooseDifficulty = true)
     {
         HideYeet();
 
@@ -876,7 +878,18 @@ public class DiceManager : MonoBehaviour
         playerBoard.ResetBoard();
         aiBoard.ResetBoard();
 
-        StartPlayerTurn();
+        if (chooseDifficulty && difficultyPanel != null)
+        {
+            // 난이도 선택 화면으로 돌아감 (규칙 화면은 다시 보여주지 않음)
+            difficultyChosen = false;
+            isBusy = true;
+            SetInfo("");
+            StartCoroutine(StartWithRules(false));
+        }
+        else
+        {
+            StartPlayerTurn();
+        }
     }
 
     // ==========================================
